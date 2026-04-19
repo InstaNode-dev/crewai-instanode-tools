@@ -2,14 +2,14 @@
 tools.py — CrewAI BaseTool subclasses for instanode.dev provisioning.
 
 CrewAI's tool contract:
-- Subclass `crewai.tools.BaseTool`.
-- Declare `name`, `description` as class attributes.
-- Declare `args_schema` pointing at a Pydantic model for structured args.
-- Implement `_run(...)` returning a string that the LLM sees.
+- Subclass ``crewai.tools.BaseTool``.
+- Declare ``name``, ``description`` as class attributes.
+- Declare ``args_schema`` pointing at a Pydantic model for structured args.
+- Implement ``_run(...)`` returning a string that the LLM sees.
 
-Each tool is a thin adapter over a method on `instanode.Client`. Errors
-are caught and returned as strings (never raised) so a retrying agent
-can recover gracefully.
+Each tool is a thin adapter over a method on ``instanode.Client``. Errors
+are caught and returned as strings (never raised) so a retrying agent can
+recover gracefully instead of seeing an exception unwind the loop.
 """
 
 from __future__ import annotations
@@ -29,23 +29,20 @@ import instanode
 
 
 class _ProvisionDBArgs(BaseModel):
-    name: Optional[str] = Field(
-        default=None,
-        description="Optional human-readable label shown in the instanode dashboard.",
+    name: str = Field(
+        description=(
+            "Short kebab-case label for the database (required). Shown in the "
+            "instanode dashboard. 1-120 characters."
+        ),
     )
 
 
 class _ProvisionWebhookArgs(BaseModel):
-    name: Optional[str] = Field(
-        default=None,
-        description="Optional label for the webhook receiver.",
-    )
-
-
-class _ProvisionMongoArgs(BaseModel):
-    name: Optional[str] = Field(
-        default=None,
-        description="Optional label for the MongoDB database.",
+    name: str = Field(
+        description=(
+            "Short kebab-case label for the webhook receiver (required). "
+            "1-120 characters."
+        ),
     )
 
 
@@ -95,7 +92,7 @@ class ProvisionPostgresTool(_InstanodeBase):
     )
     args_schema: Type[BaseModel] = _ProvisionDBArgs
 
-    def _run(self, name: Optional[str] = None) -> str:
+    def _run(self, name: str) -> str:
         try:
             res = self._client.provision_database(name=name)
         except instanode.InstanodeError as exc:
@@ -103,7 +100,7 @@ class ProvisionPostgresTool(_InstanodeBase):
         return (
             f"Postgres ready. DSN: {res.connection_url} "
             f"(tier={res.tier}, storage_mb={res.limits.storage_mb}, "
-            f"expires_in={res.limits.expires_in})"
+            f"expires_in={res.limits.expires_in or 'never'})"
         )
 
 
@@ -111,34 +108,20 @@ class ProvisionWebhookTool(_InstanodeBase):
     name: str = "provision_webhook"
     description: str = (
         "Provision an HTTPS webhook receiver URL. Accepts any POST and stores "
-        "the last 100 request bodies for later inspection. Use for GitHub "
-        "webhooks, Stripe events, Slack slash commands, or any third-party "
-        "callback."
+        "recent request bodies for later inspection. Use for GitHub webhooks, "
+        "Stripe events, Slack slash commands, or any third-party callback."
     )
     args_schema: Type[BaseModel] = _ProvisionWebhookArgs
 
-    def _run(self, name: Optional[str] = None) -> str:
+    def _run(self, name: str) -> str:
         try:
             res = self._client.provision_webhook(name=name)
         except instanode.InstanodeError as exc:
             return f"ERROR: {exc}"
-        return f"Webhook URL: {res.connection_url} (tier={res.tier})"
-
-
-class ProvisionMongoTool(_InstanodeBase):
-    name: str = "provision_mongo"
-    description: str = (
-        "Provision a MongoDB database and return a mongodb:// URI. Use for "
-        "document/JSON workloads."
-    )
-    args_schema: Type[BaseModel] = _ProvisionMongoArgs
-
-    def _run(self, name: Optional[str] = None) -> str:
-        try:
-            res = self._client.provision_mongodb(name=name)
-        except instanode.InstanodeError as exc:
-            return f"ERROR: {exc}"
-        return f"MongoDB URI: {res.connection_url} (tier={res.tier})"
+        return (
+            f"Webhook URL: {res.connection_url} "
+            f"(tier={res.tier}, expires_in={res.limits.expires_in or 'never'})"
+        )
 
 
 class ListResourcesTool(_InstanodeBase):
@@ -158,5 +141,6 @@ class ListResourcesTool(_InstanodeBase):
         if not resources:
             return "No resources."
         return "Resources:\n" + "\n".join(
-            f"- {r.service} ({r.tier}) created {r.created_at}" for r in resources
+            f"- {r.resource_type} ({r.tier}) token={r.token} created={r.created_at}"
+            for r in resources
         )

@@ -32,14 +32,12 @@ Links
 from crewai_instanode_tools.tools import (
     ProvisionPostgresTool,
     ProvisionWebhookTool,
-    ProvisionMongoTool,
     ListResourcesTool,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     "ProvisionPostgresTool",
     "ProvisionWebhookTool",
-    "ProvisionMongoTool",
     "ListResourcesTool",
 ]

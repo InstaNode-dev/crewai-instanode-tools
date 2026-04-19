@@ -35,9 +35,12 @@ Crew(agents=[db_provisioner], tasks=[task]).kickoff()
 ## Tool catalog
 
 - `ProvisionPostgresTool` — `postgres://` DSN, pgvector pre-installed.
-- `ProvisionWebhookTool` — HTTPS receiver URL (stores last 100 request bodies).
-- `ProvisionMongoTool` — `mongodb://` URI.
+- `ProvisionWebhookTool` — HTTPS receiver URL (stores recent request bodies).
 - `ListResourcesTool` — enumerate resources owned by the current API key.
+
+MongoDB, Redis/cache, NATS queue, and heartbeat-monitor tools are on the
+roadmap, gated on the matching backend endpoints landing. They live on
+the `feature/full-api` branch.
 
 ### Paid-tier credentials
 
