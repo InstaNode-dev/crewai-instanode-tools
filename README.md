@@ -1,35 +1,38 @@
-# crewai-instanode-tools
+# crewai-instanode-tools — provision a database from a CrewAI agent in one call
 
-[CrewAI](https://crewai.com) tools for [instanode.dev](https://instanode.dev).
-Let CrewAI agents provision ephemeral Postgres databases + webhook receivers
-mid-task. No Docker, no account for the free tier.
+**CrewAI tools for [instanode.dev](https://instanode.dev).** Let a CrewAI agent
+provision a real Postgres database (pgvector pre-installed) or a webhook receiver
+mid-task with a single tool call — no signup, no Docker, no setup. Free anonymous
+tier (24h TTL). Prefer MCP? Use the [instanode MCP server](https://www.npmjs.com/package/@instanode/mcp)
+(Claude Code / Cursor / Copilot / Windsurf) instead.
 
-```
+```bash
 pip install crewai-instanode-tools
 ```
 
-## Usage
+## Use it from a CrewAI agent
 
 ```python
 from crewai import Agent, Task, Crew
 from crewai_instanode_tools import (
     ProvisionPostgresTool,
     ProvisionWebhookTool,
+    ListResourcesTool,
 )
 
-db_provisioner = Agent(
+provisioner = Agent(
     role="Infrastructure provisioner",
     goal="Give the team working database URLs with zero setup.",
-    backstory="Spins up Postgres/webhooks via instanode.dev.",
-    tools=[ProvisionPostgresTool(), ProvisionWebhookTool()],
+    backstory="Spins up Postgres + webhooks via instanode.dev.",
+    tools=[ProvisionPostgresTool(), ProvisionWebhookTool(), ListResourcesTool()],
 )
 
 task = Task(
     description="Stand up a Postgres DB for the embeddings pipeline and report its DSN.",
-    agent=db_provisioner,
+    agent=provisioner,
 )
 
-Crew(agents=[db_provisioner], tasks=[task]).kickoff()
+Crew(agents=[provisioner], tasks=[task]).kickoff()
 ```
 
 ## Tool catalog
